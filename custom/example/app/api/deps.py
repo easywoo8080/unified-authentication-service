@@ -1,20 +1,18 @@
 from collections.abc import Generator
 from typing import Annotated
 
-import jwt
+import httpx
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jwt.exceptions import InvalidTokenError
-from pydantic import ValidationError
 from sqlmodel import Session
 
-from app.core import security
 from app.core.config import settings
 from app.core.db import engine
-from app.models import TokenPayload, User
+from app.models import UserPublic
 
+# Point to external auth service
 reusable_oauth2 = OAuth2PasswordBearer(
-    tokenUrl=f"{settings.API_V1_STR}/login/access-token"
+    tokenUrl=f"{settings.AUTH_SERVICE_URL}{settings.API_V1_STR}/login/access-token"
 )
 
 
@@ -27,29 +25,43 @@ SessionDep = Annotated[Session, Depends(get_db)]
 TokenDep = Annotated[str, Depends(reusable_oauth2)]
 
 
-def get_current_user(session: SessionDep, token: TokenDep) -> User:
+async def get_current_user(token: TokenDep) -> UserPublic:
+    """
+    Get current user by validating token with external auth service
+    """
     try:
-        payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[security.ALGORITHM]
-        )
-        token_data = TokenPayload(**payload)
-    except (InvalidTokenError, ValidationError):
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{settings.AUTH_SERVICE_URL}{settings.API_V1_STR}/login/test-token",
+                headers={"Authorization": f"Bearer {token}"},
+                timeout=10.0
+            )
+            
+        if response.status_code != 200:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials",
+            )
+            
+        user_data = response.json()
+        return UserPublic(**user_data)
+        
+    except httpx.RequestError:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication service unavailable",
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
         )
-    user = session.get(User, token_data.sub)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    if not user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
-    return user
 
 
-CurrentUser = Annotated[User, Depends(get_current_user)]
+CurrentUser = Annotated[UserPublic, Depends(get_current_user)]
 
 
-def get_current_active_superuser(current_user: CurrentUser) -> User:
+def get_current_active_superuser(current_user: CurrentUser) -> UserPublic:
     if not current_user.is_superuser:
         raise HTTPException(
             status_code=403, detail="The user doesn't have enough privileges"

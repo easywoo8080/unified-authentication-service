@@ -94,6 +94,9 @@ class Settings(BaseSettings):
     EMAIL_TEST_USER: EmailStr = "test@example.com"
     FIRST_SUPERUSER: EmailStr
     FIRST_SUPERUSER_PASSWORD: str
+    
+    # External auth service configuration
+    AUTH_SERVICE_URL: str = "http://localhost:8000"
 
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         if value == "changethis":
