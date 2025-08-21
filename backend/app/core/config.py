@@ -30,7 +30,10 @@ class Settings(BaseSettings):
         env_file="../.env",
         env_ignore_empty=True,
         extra="ignore",
+
     )
+    HOST: str = "0.0.0.0"
+    PORT: int = 8000
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = secrets.token_urlsafe(32)
     # 60 minutes * 24 hours * 8 days = 8 days
