@@ -54,6 +54,10 @@ class Settings(BaseSettings):
 
     PROJECT_NAME: str
     SENTRY_DSN: HttpUrl | None = None
+    
+    # JWT RSA Keys
+    JWT_PRIVATE_KEY_PATH: str = "keys/jwt_key"
+    JWT_PUBLIC_KEY_PATH: str = "keys/jwt_key_public.pem"
     POSTGRES_SERVER: str
     POSTGRES_PORT: int = 5432
     POSTGRES_USER: str

@@ -122,27 +122,3 @@ def recover_password_html_content(email: str, session: SessionDep) -> Any:
     return HTMLResponse(
         content=email_data.html_content, headers={"subject:": email_data.subject}
     )
-
-
-@router.post("/verify-token", response_model=UserPublic)
-def verify_token(current_user: CurrentUser) -> Any:
-    """
-    Verify access token (alias for test-token)
-    """
-    print('current_user : ', current_user)
-    return current_user
-
-
-@router.get("/public-key")
-def get_jwt_public_key() -> dict:
-    """
-    Get RSA public key for JWT verification by other services
-    """
-    from app.core.security import get_public_key
-    
-    public_key = get_public_key()
-    return {
-        "public_key": public_key,
-        "algorithm": "RS256",
-        "key_type": "RSA"
-    }
