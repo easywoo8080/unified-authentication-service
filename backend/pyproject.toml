@@ -23,6 +23,7 @@ dependencies = [
     "pyjwt<3.0.0,>=2.8.0",
     # Confirmed to work with version 0.6.4
     "httptools>=0.6.4",
+    "cryptography>=45.0.6",
 ]
 
 [tool.uv]
